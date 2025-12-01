@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       IMG_URL:
-        description: 'URL of image'
+        description: 'URL of image (zip file expected)'
         required: true
         default: ''
       PART_NAME:
@@ -48,14 +48,27 @@ jobs:
       run: |
         git clone ${{ github.event.inputs.EXTRA_KEY_TREE_URL }} -b ${{ github.event.inputs.EXTRA_KEY_BRANCH }} ./extra_key
 
-    - name: patch
+    - name: patch 🛠️ (Updated for Zip Extraction)
       run: |
+        # 1. Install required packages, including unzip
         sudo apt update
-        sudo apt -y install build-essential python openssl curl wget busybox
-        # ... your existing setup commands
+        sudo apt -y install build-essential python openssl curl wget busybox unzip
+        
+        # 2. Setup Python environment
         wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && sudo python2.7 get-pip.py
         pip2 install pycryptodome
-        curl -o image.img -L "${{ github.event.inputs.IMG_URL }}"
+        
+        # 3. Download the zip file and extract/rename
+        curl -o download.zip -L "${{ github.event.inputs.IMG_URL }}"
+        
+        # Extract only super.bin and rename it to image.img
+        # -j: junk paths (don't create directory structure from zip)
+        # -p: sends output to stdout
+        # > image.img: redirects stdout to image.img
+        unzip -j download.zip super.bin -p > image.img
+        rm download.zip # Clean up the downloaded zip file
+        
+        # 4. Setup AVB tool and sign
         curl -o avbtool.tgz -L "https://android.googlesource.com/platform/external/avb/+archive/refs/heads/pie-release.tar.gz"
         mkdir work
         tar xzvf avbtool.tgz -C work/
@@ -65,39 +78,38 @@ jobs:
         cp -f work/rsa4096_boot.pem work/rsa4096_dtb.pem
         cp -f work/rsa4096_boot.pem work/rsa4096_dtbo.pem
         if [ -d extra_key ]; then cp -f extra_key/*.pem work/; fi
+        
+        # 5. Execute signing script
         sudo rm -f /usr/bin/python /usr/bin/python3.6 /usr/bin/python3.6m /usr/local/bin/python
         sudo ln -sf /usr/bin/python2.7 /usr/bin/python
         cd work
         ./sign_avb.sh ${{ github.event.inputs.PART_NAME }} ../image.img ../image.img ${{ github.event.inputs.PART_SIZE }}
-        # The signed image is now ../image.img
 
-    - name: Split large file (if > 2GB) 🆕
+    - name: Split large file (if > 2GB)
       id: split_file
       run: |
-        # Get file size in bytes
+        # Check if the output file is larger than 1.9GB (2147381248 bytes)
         FILE_SIZE=$(stat -c%s image.img)
-        # 2 GB in bytes is 2 * 1024 * 1024 * 1024 = 2147483648
         MAX_SIZE_BYTES=2147381248
         
         echo "File size: $FILE_SIZE bytes"
         
         if [ $FILE_SIZE -gt $MAX_SIZE_BYTES ]; then
-          echo "File is larger than 2GB. Splitting into 2GB chunks..."
-          # The -b flag specifies the size. 2G means 2 Gigabytes.
+          echo "File is larger than 1.9GB. Splitting into 1.9GB chunks..."
+          # The -b flag specifies the size. 1.9G means 1.9 Gigabytes.
           # The output files will be named image.img.aa, image.img.ab, etc.
-          split -b 2G image.img image.img.
+          split -b 1.9G image.img image.img.
           # Remove the original large file
           rm image.img
           echo "SPLIT=true" >> $GITHUB_OUTPUT
         else
-          echo "File is 2GB or smaller. No splitting required."
+          echo "File is 1.9GB or smaller. No splitting required."
           echo "SPLIT=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
       with:
-        # Use an expanded glob pattern to include split files if they exist
         files: |
           image.img*
         name: ${{ github.run_id }}
