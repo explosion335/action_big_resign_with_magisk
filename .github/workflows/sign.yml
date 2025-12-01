@@ -77,7 +77,7 @@ jobs:
         # Get file size in bytes
         FILE_SIZE=$(stat -c%s image.img)
         # 2 GB in bytes is 2 * 1024 * 1024 * 1024 = 2147483648
-        MAX_SIZE_BYTES=2147483648
+        MAX_SIZE_BYTES=2147381248
         
         echo "File size: $FILE_SIZE bytes"
         
