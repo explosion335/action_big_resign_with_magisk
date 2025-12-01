@@ -3,15 +3,15 @@ name: sign-one-partition-only
 on:
   workflow_dispatch:
     inputs:
-      IMG_URL:    
+      IMG_URL:
         description: 'URL of image'
         required: true
         default: ''
-      PART_NAME:    
+      PART_NAME:
         description: 'partition name of your image (eg. boot/recovery)'
         required: true
         default: ''
-      PART_SIZE:    
+      PART_SIZE:
         description: 'partition size (unit: mb)'
         required: false
       EXTRA_KEY_TREE_URL:
@@ -27,7 +27,7 @@ jobs:
     container:
       image: ghcr.io/catthehacker/ubuntu:runner-20.04
     steps:
-    
+
     - name: Checkout
       uses: actions/checkout@v4
       with:
@@ -38,8 +38,8 @@ jobs:
       if: ${{ startsWith(github.event.inputs.EXTRA_KEY_TREE_URL, 'git@github.com') }}
       uses: webfactory/ssh-agent@v0.9.0
       with:
-          ssh-private-key: |
-            ${{ secrets.SSH_PRIVATE_KEY }}
+        ssh-private-key: |
+          ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Clone extra keys
       if: |
@@ -52,6 +52,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt -y install build-essential python openssl curl wget busybox
+        # ... your existing setup commands
         wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && sudo python2.7 get-pip.py
         pip2 install pycryptodome
         curl -o image.img -L "${{ github.event.inputs.IMG_URL }}"
@@ -68,12 +69,37 @@ jobs:
         sudo ln -sf /usr/bin/python2.7 /usr/bin/python
         cd work
         ./sign_avb.sh ${{ github.event.inputs.PART_NAME }} ../image.img ../image.img ${{ github.event.inputs.PART_SIZE }}
+        # The signed image is now ../image.img
+
+    - name: Split large file (if > 2GB) 🆕
+      id: split_file
+      run: |
+        # Get file size in bytes
+        FILE_SIZE=$(stat -c%s image.img)
+        # 2 GB in bytes is 2 * 1024 * 1024 * 1024 = 2147483648
+        MAX_SIZE_BYTES=2147483648
+        
+        echo "File size: $FILE_SIZE bytes"
+        
+        if [ $FILE_SIZE -gt $MAX_SIZE_BYTES ]; then
+          echo "File is larger than 2GB. Splitting into 2GB chunks..."
+          # The -b flag specifies the size. 2G means 2 Gigabytes.
+          # The output files will be named image.img.aa, image.img.ab, etc.
+          split -b 2G image.img image.img.
+          # Remove the original large file
+          rm image.img
+          echo "SPLIT=true" >> $GITHUB_OUTPUT
+        else
+          echo "File is 2GB or smaller. No splitting required."
+          echo "SPLIT=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
       with:
-        files: | 
-          image.img
+        # Use an expanded glob pattern to include split files if they exist
+        files: |
+          image.img*
         name: ${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
