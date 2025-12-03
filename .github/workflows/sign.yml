@@ -3,15 +3,15 @@ name: sign-one-partition-only
 on:
   workflow_dispatch:
     inputs:
-      IMG_URL:
-        description: 'URL of image (zip file expected)'
+      IMG_URL:    
+        description: 'URL of image'
         required: true
         default: ''
-      PART_NAME:
+      PART_NAME:    
         description: 'partition name of your image (eg. boot/recovery)'
         required: true
         default: ''
-      PART_SIZE:
+      PART_SIZE:    
         description: 'partition size (unit: mb)'
         required: false
       EXTRA_KEY_TREE_URL:
@@ -27,7 +27,7 @@ jobs:
     container:
       image: ghcr.io/catthehacker/ubuntu:runner-20.04
     steps:
-
+    
     - name: Checkout
       uses: actions/checkout@v4
       with:
@@ -38,8 +38,8 @@ jobs:
       if: ${{ startsWith(github.event.inputs.EXTRA_KEY_TREE_URL, 'git@github.com') }}
       uses: webfactory/ssh-agent@v0.9.0
       with:
-        ssh-private-key: |
-          ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Clone extra keys
       if: |
@@ -48,27 +48,13 @@ jobs:
       run: |
         git clone ${{ github.event.inputs.EXTRA_KEY_TREE_URL }} -b ${{ github.event.inputs.EXTRA_KEY_BRANCH }} ./extra_key
 
-    - name: patch 🛠️ (Updated for Zip Extraction)
+    - name: patch
       run: |
-        # 1. Install required packages, including unzip
         sudo apt update
-        sudo apt -y install build-essential python openssl curl wget busybox unzip
-        
-        # 2. Setup Python environment
+        sudo apt -y install build-essential python openssl curl wget busybox
         wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && sudo python2.7 get-pip.py
         pip2 install pycryptodome
-        
-        # 3. Download the zip file and extract/rename
-        curl -o download.zip -L "${{ github.event.inputs.IMG_URL }}"
-        
-        # Extract only super.bin and rename it to image.img
-        # -j: junk paths (don't create directory structure from zip)
-        # -p: sends output to stdout
-        # > image.img: redirects stdout to image.img
-        unzip -j download.zip super.bin -p > image.img
-        rm download.zip # Clean up the downloaded zip file
-        
-        # 4. Setup AVB tool and sign
+        curl -o image.img -L "${{ github.event.inputs.IMG_URL }}"
         curl -o avbtool.tgz -L "https://android.googlesource.com/platform/external/avb/+archive/refs/heads/pie-release.tar.gz"
         mkdir work
         tar xzvf avbtool.tgz -C work/
@@ -78,40 +64,16 @@ jobs:
         cp -f work/rsa4096_boot.pem work/rsa4096_dtb.pem
         cp -f work/rsa4096_boot.pem work/rsa4096_dtbo.pem
         if [ -d extra_key ]; then cp -f extra_key/*.pem work/; fi
-        
-        # 5. Execute signing script
         sudo rm -f /usr/bin/python /usr/bin/python3.6 /usr/bin/python3.6m /usr/local/bin/python
         sudo ln -sf /usr/bin/python2.7 /usr/bin/python
         cd work
         ./sign_avb.sh ${{ github.event.inputs.PART_NAME }} ../image.img ../image.img ${{ github.event.inputs.PART_SIZE }}
 
-    - name: Split large file (if > 2GB)
-      id: split_file
-      run: |
-        # Check if the output file is larger than 1.9GB (2147381248 bytes)
-        FILE_SIZE=$(stat -c%s image.img)
-        MAX_SIZE_BYTES=2147381248
-        
-        echo "File size: $FILE_SIZE bytes"
-        
-        if [ $FILE_SIZE -gt $MAX_SIZE_BYTES ]; then
-          echo "File is larger than 1.9GB. Splitting into 1.9GB chunks..."
-          # The -b flag specifies the size. 1.9G means 1.9 Gigabytes.
-          # The output files will be named image.img.aa, image.img.ab, etc.
-          split -b 1.9G image.img image.img.
-          # Remove the original large file
-          rm image.img
-          echo "SPLIT=true" >> $GITHUB_OUTPUT
-        else
-          echo "File is 1.9GB or smaller. No splitting required."
-          echo "SPLIT=false" >> $GITHUB_OUTPUT
-        fi
-
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          image.img*
+        files: | 
+          image.img
         name: ${{ github.run_id }}
         tag_name: ${{ github.run_id }}
         body: |
