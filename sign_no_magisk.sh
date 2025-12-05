@@ -7,7 +7,7 @@ tar xzvf avbtool.tgz -C vbmeta/
 mv work/vbmeta* vbmeta/keys/vbmeta.img
 busybox unzip -oq magisk.apk -d boot/zzz
 mv main/boot_patch_no_magisk.sh boot/
-mv main/sign_avb_no_magisk.sh vbmeta/
+mv main/sign_avb.sh vbmeta/
 git clone https://github.com/TomKing062/vendor_sprd_proprietories-source_packimage.git
 cp -a vendor_sprd_proprietories-source_packimage/sign_image/v2/prebuilt/* work/
 cp -a main/config work/config-unisoc
@@ -120,7 +120,7 @@ if [ $RETVAL -eq 0 ]; then
     cd boot
     ./boot_patch_no_magisk.sh
     cd ../vbmeta
-    ./sign_avb_no_magisk.sh init_boot ../boot/boot.img ../boot/patched.img
+    ./sign_avb.sh init_boot ../boot/boot.img ../boot/patched.img
     cp ../boot/patched.img ../output/init_boot.img
     cd ..
 fi
@@ -132,14 +132,14 @@ if [ $RETVAL -eq 0 ]; then
     cp -f work/config-unisoc/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_boot_pub.bin
     if [ -f output/init_boot.img ]; then
         cd vbmeta
-        ./sign_avb_no_magisk.sh boot ../boot/boot_real.img ../boot/boot_real.img
+        ./sign_avb.sh boot ../boot/boot_real.img ../boot/boot_real.img
         cp ../boot/boot_real.img ../output/boot.img
     else
         cd boot
 	cp -f boot_real.img boot.img
         ./boot_patch_no_magisk.sh
         cd ../vbmeta
-        ./sign_avb_no_magisk.sh boot ../boot/boot.img ../boot/patched.img
+        ./sign_avb.sh boot ../boot/boot.img ../boot/patched.img
         cp ../boot/patched.img ../output/boot.img
     fi
     cd ..
@@ -152,7 +152,7 @@ if [ $RETVAL -eq 0 ]; then
     cp work/config-unisoc/rsa4096_boot.pem vbmeta/rsa4096_dtbo.pem
     cp -f work/config-unisoc/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_dtbo_pub.bin
     cd vbmeta
-    ./sign_avb_no_magisk.sh dtbo ../dtbo/dtbo.img ../dtbo/dtbo.img
+    ./sign_avb.sh dtbo ../dtbo/dtbo.img ../dtbo/dtbo.img
     cp ../dtbo/dtbo.img ../output/dtbo.img
     cd ..
 fi
@@ -164,7 +164,7 @@ if [ $RETVAL -eq 0 ]; then
     cp work/config-unisoc/rsa4096_boot.pem vbmeta/rsa4096_dtb.pem
     cp -f work/config-unisoc/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_dtb_pub.bin
     cd vbmeta
-    ./sign_avb_no_magisk.sh dtb ../dtb/dtb.img ../dtb/dtb.img
+    ./sign_avb.sh dtb ../dtb/dtb.img ../dtb/dtb.img
     cp ../dtb/dtb.img ../output/dtb.img
     cd ..
 fi
@@ -176,7 +176,7 @@ if [ $RETVAL -eq 0 ]; then
     cp work/config-unisoc/rsa4096_recovery.pem vbmeta/
     cp -f work/config-unisoc/rsa4096_recovery_pub.bin vbmeta/keys/
     cd vbmeta
-    ./sign_avb_no_magisk.sh recovery ../recovery/recovery.img ../recovery/recovery.img
+    ./sign_avb.sh recovery ../recovery/recovery.img ../recovery/recovery.img
     cp ../recovery/recovery.img ../output/recovery.img
     cd ..
 fi
