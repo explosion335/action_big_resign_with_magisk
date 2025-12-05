@@ -5,14 +5,14 @@ mkdir -p vbmeta/keys
 mkdir output
 tar xzvf avbtool.tgz -C vbmeta/
 mv work/vbmeta* vbmeta/keys/vbmeta.img
-busybox unzip -oq magisk.apk -d boot/zzz
+
 mv main/boot_patch.sh boot/
 mv main/sign_avb.sh vbmeta/
 git clone https://github.com/TomKing062/vendor_sprd_proprietories-source_packimage.git
-cp -a vendor_sprd_proprietories-source_packimage/sign_image/v3/prebuilt/* work/
-cp -a main/config work/
-if [ -d extra_key ]; then cp -f extra_key/* work/config/; fi
-cp vendor_sprd_proprietories-source_packimage/sign_image/v3/sign_image_v3.sh work/
+cp -a vendor_sprd_proprietories-source_packimage/sign_image/v2/prebuilt/* work/
+cp -a main/config work/config-unisoc
+if [ -d extra_key ]; then cp -f extra_key/* work/config-unisoc/; fi
+cp vendor_sprd_proprietories-source_packimage/sign_image/v2/sign_image_v2.sh work/
 gcc -o work/get-raw-image vendor_sprd_proprietories-source_packimage/sign_image/get-raw-image.c
 chmod +x work/*
 cd vendor_sprd_proprietories-source_packimage/sign_vbmeta
@@ -24,7 +24,7 @@ cd ../../vbmeta/keys/
 mv sign_vbmeta.sh ../
 mv padding.py ../
 cd ../..
-cp work/config/rsa4096_vbmeta.pem vbmeta/
+cp work/config-unisoc/rsa4096_vbmeta.pem vbmeta/
 chmod +x vbmeta/*
 sudo rm -f /usr/bin/python /usr/bin/python3.6 /usr/bin/python3.6m /usr/local/bin/python
 sudo ln -sf /usr/bin/python2.7 /usr/bin/python
@@ -115,8 +115,8 @@ cd ..
 mv work/init_boot* boot/boot.img
 RETVAL=$?
 if [ $RETVAL -eq 0 ]; then
-    cp work/config/rsa4096_init_boot.pem vbmeta/rsa4096_init_boot.pem
-    cp -f work/config/rsa4096_init_boot_pub.bin vbmeta/keys/rsa4096_init_boot_pub.bin
+    cp work/config-unisoc/rsa4096_init_boot.pem vbmeta/rsa4096_init_boot.pem
+    cp -f work/config-unisoc/rsa4096_init_boot_pub.bin vbmeta/keys/rsa4096_init_boot_pub.bin
     cd boot
     ./boot_patch.sh
     cd ../vbmeta
@@ -128,8 +128,8 @@ fi
 mv work/boot* boot/boot_real.img
 RETVAL=$?
 if [ $RETVAL -eq 0 ]; then
-    cp work/config/rsa4096_boot.pem vbmeta/rsa4096_boot.pem
-    cp -f work/config/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_boot_pub.bin
+    cp work/config-unisoc/rsa4096_boot.pem vbmeta/rsa4096_boot.pem
+    cp -f work/config-unisoc/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_boot_pub.bin
     if [ -f output/init_boot.img ]; then
         cd vbmeta
         ./sign_avb.sh boot ../boot/boot_real.img ../boot/boot_real.img
@@ -149,8 +149,8 @@ mkdir dtbo
 mv work/dtbo* dtbo/dtbo.img
 RETVAL=$?
 if [ $RETVAL -eq 0 ]; then
-    cp work/config/rsa4096_boot.pem vbmeta/rsa4096_dtbo.pem
-    cp -f work/config/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_dtbo_pub.bin
+    cp work/config-unisoc/rsa4096_boot.pem vbmeta/rsa4096_dtbo.pem
+    cp -f work/config-unisoc/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_dtbo_pub.bin
     cd vbmeta
     ./sign_avb.sh dtbo ../dtbo/dtbo.img ../dtbo/dtbo.img
     cp ../dtbo/dtbo.img ../output/dtbo.img
@@ -161,8 +161,8 @@ mkdir dtb
 mv work/dtb* dtb/dtb.img
 RETVAL=$?
 if [ $RETVAL -eq 0 ]; then
-    cp work/config/rsa4096_boot.pem vbmeta/rsa4096_dtb.pem
-    cp -f work/config/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_dtb_pub.bin
+    cp work/config-unisoc/rsa4096_boot.pem vbmeta/rsa4096_dtb.pem
+    cp -f work/config-unisoc/rsa4096_boot_pub.bin vbmeta/keys/rsa4096_dtb_pub.bin
     cd vbmeta
     ./sign_avb.sh dtb ../dtb/dtb.img ../dtb/dtb.img
     cp ../dtb/dtb.img ../output/dtb.img
@@ -173,8 +173,8 @@ mkdir recovery
 mv work/recovery* recovery/recovery.img
 RETVAL=$?
 if [ $RETVAL -eq 0 ]; then
-    cp work/config/rsa4096_recovery.pem vbmeta/
-    cp -f work/config/rsa4096_recovery_pub.bin vbmeta/keys/
+    cp work/config-unisoc/rsa4096_recovery.pem vbmeta/
+    cp -f work/config-unisoc/rsa4096_recovery_pub.bin vbmeta/keys/
     cd vbmeta
     ./sign_avb.sh recovery ../recovery/recovery.img ../recovery/recovery.img
     cp ../recovery/recovery.img ../output/recovery.img
@@ -187,7 +187,7 @@ python padding.py
 cp vbmeta-sign-custom.img ../output/vbmeta.img
 
 cd ../work
-./sign_image_v3.sh
+./sign_image_v2.sh
 cp *-sign.bin ../output/
 cd ..
 zip -r -v resigned.zip output
