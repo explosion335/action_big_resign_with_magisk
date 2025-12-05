@@ -1,4 +1,4 @@
-name: resign_v3
+name: resign
 
 on:
   workflow_dispatch:
@@ -53,8 +53,8 @@ jobs:
         wget https://raw.githubusercontent.com/magojohnji/magiskboot-linux/main/x86_64/magiskboot
         chmod +x magiskboot
         chmod +x main/*.sh
-        mv main/sign_v3.sh ./
-        ./sign_v3.sh
+        mv main/sign.sh ./
+        ./sign.sh
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
