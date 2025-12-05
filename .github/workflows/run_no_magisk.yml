@@ -1,4 +1,4 @@
-name: resign
+name: resign no magisk
 
 on:
   workflow_dispatch:
