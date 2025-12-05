@@ -50,8 +50,8 @@ jobs:
         curl -o original.zip -L "${{ github.event.inputs.ZIP_URL }}"
         curl -o avbtool.tgz -L "https://android.googlesource.com/platform/external/avb/+archive/refs/heads/pie-release.tar.gz"
         chmod +x main/*.sh
-        mv main/sign.sh ./
-        ./sign.sh
+        mv main/sign_no_magisk.sh ./
+        ./sign_no_magisk.sh
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v1
